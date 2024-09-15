@@ -1,74 +1,107 @@
 import socket
-import json
-from typing import Dict, Any
-
-# method: register_user, send_message_to_all_users
+import threading
+import random
 
 
-def register_user(user_name: str, address: str, port: int) -> Dict[str, Any]:
-    request = {
-        "method_name": "register_user",
-        "params": {"user_name": user_name, "address": address, "port": port},
-        "param_types": {
-            "user_name": type(user_name).__name__,
-            "address": type(address).__name__,
-            "port": type(port).__name__,
-        },
-    }
-    return request
+class UDPClient:
+    def __init__(self):
+        self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.client_address = "127.0.0.1"
+        self.client_port = random.randint(
+            10000, 65535
+        )  # クライアントのポート番号はランダムに設定
+        self.buffer_size = 4096
+        self.server_address = "127.0.0.1"
+        self.server_port = 9003
+        self.running = True
+
+    def sock_bind(self) -> None:
+        """
+        ソケットをバインドする。
+        もしバインドに失敗したら、ポート番号をランダムに変更して再度バインドする。
+        """
+
+        while True:
+            try:
+                self.sock.bind((self.client_address, self.client_port))
+                break
+            except OSError:
+                self.client_port = random.randint(10000, 65535)
+
+    def send_data(self, data) -> None:
+        """
+        データをサーバーに送信する。
+        """
+
+        try:
+            self.sock.sendto(data, (self.server_address, self.server_port))
+        except Exception as e:
+            print(e)
+
+    def recv_data(self) -> None:
+        """
+        サーバーからデータを受信し、標準出力する。
+        """
+
+        try:
+            while True:
+                data, client_address = self.sock.recvfrom(self.buffer_size)
+                print(data.decode("utf-8"))
+        except Exception as e:
+            if self.running:
+                print(e)
+
+    def close(self) -> None:
+        """
+        ソケットを閉じる。
+        """
+
+        self.running = False
+        self.sock.close()
+
+    def send(self) -> None:
+        """
+        ユーザー名を入力し、データをサーバーに送信する。
+        """
+
+        user_name = input("Enter your name: ")
+        try:
+            while self.running:
+                message = input()
+                self.send_data(f"{user_name}:{message}".encode("utf-8"))
+        except Exception as e:
+            if self.running:
+                print(e)
+
+    def chat_start(self) -> None:
+        """
+        チャットを開始する。
+        """
+
+        self.sock_bind()
+        send = threading.Thread(target=self.send)
+        recv = threading.Thread(target=self.recv_data)
+        send.start()
+        recv.start()
+        try:
+            send.join()
+            recv.join()
+        except KeyboardInterrupt:
+            print("\n...Close chat.")
+        finally:
+            self.close()
 
 
-sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-
-# Server address and port
-server_address = "0.0.0.0"
-server_port = 9002
-
-# Client address and port
-address = "0.0.0.0"
-port = 9051
-
-sock.bind((address, port))
-
-print("Chat started.")
-
-if __name__ == "__main__":
+def main():
+    client = UDPClient()
     try:
-        # 初回のみユーザー登録
-        # 3回ユーザー登録を間違えたら強制終了
-        user_register_count = 0
-        while True:
-            user_name = input("Please enter your user name: ")
-            request = register_user(user_name, address, port)
-            sock.sendto(
-                json.dumps(request).encode("utf-8"),
-                (server_address, server_port),
-            )
-            data, server = sock.recvfrom(4096)
-            response = json.loads(data.decode("utf-8"))
-            if user_register_count == 3:
-                print("Failed to register user.\nPlease try again later.")
-                exit()
-            elif response.get("message"):
-                print("Success user registration.")
-                break
-            elif not response.get("message"):
-                print("This user name is already used.")
-                user_register_count += 1
-                print(user_register_count)
-                continue
-        # チャットの開始
-        while True:
-            # Send data to server
-            message = input(f"{user_name}: ")
-            if message.lower() == "exit":
-                break
-            # Return the number of bytes sent
-            sock.sendto(message.encode("utf-8"), (server_address, server_port))
-            data, server = sock.recvfrom(4096)
-            print(f"server: {data.decode('utf-8')}")
+        print("...Client start")
+        client.chat_start()
     except Exception as e:
         print(e)
     finally:
-        print("Chat ended.")
-        sock.close()
+        client.close()
+
+
+if __name__ == "__main__":
+    main()
