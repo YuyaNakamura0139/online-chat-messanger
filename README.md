@@ -47,6 +47,6 @@ Enter your name: <ユーザー名>
 <ユーザー名>: <メッセージ>
 ```
 
-デモ動画
+## デモ動画
 
-![2024-09-300 32 58-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/049c86a7-fad8-4a3f-bce7-d4cdcb07e4a7)
+![2024-09-300 32 58-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/d04c480b-ad96-4e1c-819c-b59a258bf138)
