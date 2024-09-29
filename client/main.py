@@ -12,7 +12,7 @@ class UDPClient:
         )  # クライアントのポート番号はランダムに設定
         self.buffer_size = 4096
         self.server_address = "127.0.0.1"
-        self.server_port = 9003
+        self.server_port = 9000
         self.running = True
 
     def sock_bind(self) -> None:
